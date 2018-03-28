@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: zuul-service
+  cache:
+    jcache:
+      config: classpath:ehcache.xml
+
+server:
+  port: 8079
+
+zuul:
+  #Service will be mapped under the /zull URI
+  prefix: /zull
+  routes:
+    someservice:
+      path: /someservice/**
+      servicId: someservice
+control:
+  access:
+    eureka:
+      credentials:
+        user: eureka
+        pass: eureka
+
+eureka:
+  instance:
+    hostname: localhost
+    securePort: 8302
+    instanceId: ${spring.application.name}:${random.int}
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 10
+    service-url:
+      defaultZone: http://${control.access.eureka.credentials.user}:${control.access.eureka.credentials.pass}@${eureka.instance.hostname}:${eureka.instance.securePort}/eureka/
+
+bucket4j:
+  enabled: true
+  filters:
+  - cache-name: buckets
+    filter-method: zuul
+    url: /api/someservice/verylazy
+    rate-limits:
+    - filter-key-type: expression
+      expression: "/zull/someservice/verylazy"
+      bandwidths:
+      - capacity: 2
+        time: 2
+        unit: minutes
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          strategy: THREAD
+          thread:
+            timeoutInMilliseconds: 30000
